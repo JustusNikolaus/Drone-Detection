@@ -131,7 +131,10 @@ class ObjectTrackingSystem:
                     
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
-                    
+        except Exception as e:
+            print_error(f"Error during tracking: {str(e)}")
+            print("Traceback:")
+            traceback.print_exc()
         finally:
             # Cleanup
             self.cleanup()

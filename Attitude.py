@@ -133,36 +133,35 @@ class Attitude:
         self.start_time = time.time()
 
         try:
-            while True:
-                target_system = 1           # Example target system ID
-                target_component = 1        # Example target component ID
-                type_mask = (1 << 6)        # Bitmask to ignore throttle/thrust
+            target_system = 1           # Example target system ID
+            target_component = 1        # Example target component ID
+            type_mask = (1 << 6)        # Bitmask to ignore throttle/thrust
 
-                q = self.__euler_to_quaternion(roll, pitch, yaw)
-                if not q:                   # Default to identity quaternion if conversion fails
-                                            # (so no rotation)
-                    q = (1.0, 0.0, 0.0, 0.0)
-                body_roll_rate = roll       # Roll rate in rad/s
-                body_pitch_rate = pitch     # Pitch rate in rad/s
-                body_yaw_rate = yaw         # Yaw rate in rad/s
-                # thrust = 0.5                # Example thrust (50%)
+            q = self.__euler_to_quaternion(roll, pitch, yaw)
+            if not q:                   # Default to identity quaternion if conversion fails
+                                        # (so no rotation)
+                q = (1.0, 0.0, 0.0, 0.0)
+            body_roll_rate = roll       # Roll rate in rad/s
+            body_pitch_rate = pitch     # Pitch rate in rad/s
+            body_yaw_rate = yaw         # Yaw rate in rad/s
+            thrust = 0.0                # Example thrust (50%)
 
-                time_boot_ms = int((time.time() - self.start_time) * 1000)
-                print(f"Sending simulated SET_ATTITUDE_TARGET message with time_boot_ms = {time_boot_ms}...")
+            time_boot_ms = int((time.time() - self.start_time) * 1000)
+            print(f"Sending simulated SET_ATTITUDE_TARGET message with time_boot_ms = {time_boot_ms}...")
 
-                self.connection.mav.set_attitude_target_send(
-                    time_boot_ms,
-                    target_system,
-                    target_component,
-                    type_mask,
-                    q,
-                    body_roll_rate,
-                    body_pitch_rate,
-                    body_yaw_rate
-                    # thrust
-                )
+            self.connection.mav.set_attitude_target_send(
+                time_boot_ms,
+                target_system,
+                target_component,
+                type_mask,
+                q,
+                body_roll_rate,
+                body_pitch_rate,
+                body_yaw_rate,
+                thrust
+            )
 
-                print("Message sent.")
+            print("Message sent.")
 
         except KeyboardInterrupt:
             print("Transmission stopped by user.")
