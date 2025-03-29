@@ -51,7 +51,7 @@ class ObjectTrackingSystem:
             
         except Exception as e:
             print_error(f"Error during initialization: {str(e)}")
-            print("Traceback:")
+            print_error("Traceback:")
             traceback.print_exc()
             raise
     

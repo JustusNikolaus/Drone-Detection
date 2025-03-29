@@ -7,6 +7,9 @@ import threading
 from pymavlink import mavutil
 from terminal_utils import print_info, print_success, print_warning, print_error, print_status
 
+SERIAL_PORT = "/dev/ttyAMA0"
+BAUD_RATE = 115200
+MSG_ID_ATTITUDE = mavutil.mavlink.MAVLINK_MSG_ID_ATTITUDE
 
 class Attitude:
     def __init__(self,
@@ -61,18 +64,40 @@ class Attitude:
         connection = mavutil.mavlink_connection('udpout:localhost:14550')
 
         print_info("Waiting for heartbeat...")
-        # connection.wait_heartbeat()
+        connection.wait_heartbeat()
         print_success(f"Heartbeat received from system {connection.target_system}")
 
-        #! TODO zet stream aan
+        # Set stream
+        self.set_attitude_rate(connection, 10, True)
         return connection
+
+    def set_attitude_rate(self, master, hz=10, enable=True):
+        """
+        Set the rate at which ATTITUDE messages are requested from the flight controller.
+        
+        :param master: MAVLink connection object
+        :param hz: Frequency in Hz (default 10Hz)
+        :param enable: Whether to enable or disable the stream
+        """
+        rate_us = int(1e6 / hz) if enable else 0
+        print_info(f"[+] {'Requesting' if enable else 'Disabling'} ATTITUDE at {hz if enable else 0} Hz")
+
+        master.mav.command_long_send(
+            master.target_system,
+            master.target_component,
+            mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
+            0,
+            MSG_ID_ATTITUDE,
+            rate_us,
+            0, 0, 0, 0, 0
+        )
+
 
     def _receiver_loop(self):
         """ Internal method for the receiver thread loop """
         while self.running:
             # 'blocking = true' means it will wait for a message to arrive
-            # msg = self.connection.recv_match(type = 'ATTITUDE', blocking = True)
-            msg = None
+            msg = self.connection.recv_match(type = 'ATTITUDE', blocking = True)
             if msg:
                 self.d_msg_time_boot_ms = msg.time_boot_ms
                 self.d_msg_roll = msg.roll
@@ -173,7 +198,7 @@ class Attitude:
         
         Example usage:
         q = to_quaternion(roll_in_radians, pitch_in_radians, yaw_in_radians)
-        print(f"Quaternion: w = {q[0]}, x = {q[1]}, y = {q[2]}, z = {q[3]}")
+        print_info(f"Quaternion: w = {q[0]}, x = {q[1]}, y = {q[2]}, z = {q[3]}")
         where roll_in_radians, pitch_in_radians, and yaw_in_radians are the Euler angles in radians
         """
         cr = math.cos(roll * 0.5)
