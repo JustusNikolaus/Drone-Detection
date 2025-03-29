@@ -44,7 +44,7 @@ class ObjectTrackingSystem:
                     raise Exception("PiCamera2 not available")
                 
                 self.camera = Picamera2()
-                config = self.camera.create_preview_configuration()
+                config = self.camera.create_preview_configuration(raw={"size":(1640,1232)},main={"format":'RGB888',"size": (640,480)})
                 self.camera.configure(config)
                 self.camera.start()
                 # Get a frame to determine dimensions
@@ -189,7 +189,10 @@ class ObjectTrackingSystem:
         Initialize tracking for the selected bounding box
         """
         self.tracker = ObjectTracker()
-        self.tracker.init(self.video.read()[1], bbox)
+        if self.video:
+            self.tracker.init(self.video.read()[1], bbox)
+        else:
+            self.tracker.init(self.camera.capture_array(), bbox)
         self.tracking = True
         self.selected_bbox = bbox
         # Create tracking window and destroy detection window
