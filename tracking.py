@@ -125,19 +125,27 @@ class ObjectTracker:
         
         return success, bbox, fps
     
-    def draw_tracking(self, frame, success, bbox, fps):
+    def calculate_coordinates(self, success, bbox): 
+        """
+        Calculate the rectangle coordinates and the centerpoint of the bounding box
+        """
+        if success:
+            # Calculate rectangle coordinates
+            p1 = (int(bbox[0]), int(bbox[1]))
+            p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
+            center_bbox = [int(bbox[0])+int(bbox[2]/2), int(bbox[1])+int(bbox[3]/2)] 
+            
+            return p1, p2, center_bbox
+        else:
+            return None, None, None
+        
+    def draw_tracking(self, frame, fps, p1, p2, center_box):
         """
         Draw the tracking box and FPS on the frame
         """
-        if success:
-            # Draw bbox
-            p1 = (int(bbox[0]), int(bbox[1]))
-            p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
+        if p1 is not None and p2 is not None and center_box is not None:
             cv2.rectangle(frame, p1, p2, (0,0,255), 2, 2)
-            
-            # Calculate and draw centerpoint of bbox
-            center_bbox = [int(bbox[0])+int(bbox[2]/2), int(bbox[1])+int(bbox[3]/2)]
-            cv2.circle(frame, (center_bbox[0], center_bbox[1]), 3, (0,0,255), 2)
+            cv2.circle(frame, (center_box[0], center_box[1]), 3, (0,0,255), 2)
         else:
             cv2.putText(frame, "Tracking failed!", (100, 80), self.font, 
                        0.75, (0, 0, 255), 2)
