@@ -1,28 +1,32 @@
 import cv2
 from detection import ObjectDetector
 import os
+from terminal_utils import print_info, print_success, print_warning, print_error, print_status, print_header
 
 def main():
     # Initialize the detector with YOLOv8
     detector = ObjectDetector(detection_type='yolov8')
     
     # Get the video file path
-    video_path = os.path.join('videos', 'short_meet.mp4')
+    video_path = "test_video.mp4"
+    if not os.path.exists(video_path):
+        print_error(f"Could not open video file at {video_path}")
+        return
     
     # Open the video capture
     cap = cv2.VideoCapture(video_path)
     
     if not cap.isOpened():
-        print(f"Error: Could not open video file at {video_path}")
+        print_error("Failed to open video capture")
         return
     
     # Initialize variables to track detection
     frame_count = 0
-    objects_detected = False
+    objects_detected = 0
     first_detection_frame = None
     
-    print("Processing video...")
-    print("Press ENTER to advance to next frame when objects are detected")
+    print_info("Processing video...")
+    print_info("Press ENTER to advance to next frame when objects are detected")
     
     while True:
         # Read frame from video
@@ -30,49 +34,42 @@ def main():
         if not ret:
             break
             
-        # Detect objects in the frame
-        boxes, confidences, class_ids, indexes = detector.detect(frame)
+        frame_count += 1
+        detections = detector.detect(frame)
         
-        # Check if any objects were detected in this frame
-        if len(boxes) > 0:
-            objects_detected = True
+        if detections:
+            objects_detected += 1
             if first_detection_frame is None:
                 first_detection_frame = frame_count
-                print(f"First object detected at frame {frame_count}")
+                print_success(f"First object detected at frame {frame_count}")
+            
+            # Draw bounding boxes and labels
+            for detection in detections:
+                bbox = detection['bbox']
+                label = detection['label']
+                confidence = detection['confidence']
+                
+                x1, y1, x2, y2 = map(int, bbox)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, f"{label} ({confidence:.2f})", (x1, y1 - 10),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            
+        # Display the frame
+        cv2.imshow('Detection Test', frame)
         
-            # Draw detections on the frame
-            frame = detector.draw_detections(frame, boxes, confidences, class_ids, indexes)
-            
-            # Display the frame
-            cv2.imshow('YOLOv8 Detection', frame)
-            
-            # Wait for ENTER key (ASCII code 13) when objects are detected
-            while True:
-                key = cv2.waitKey(0)
-                if key == 13:  # ENTER key
-                    break
-                elif key == ord('q'):
-                    cap.release()
-                    cv2.destroyAllWindows()
-                    return
-        else:
-            # If no objects detected, show frame briefly
-            cv2.imshow('YOLOv8 Detection', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-            
-        frame_count += 1
-    
-    # Print final results
-    print("\nDetection Results:")
-    print(f"Objects detected: {objects_detected}")
-    if first_detection_frame is not None:
-        print(f"First detection occurred at frame: {first_detection_frame}")
-    print(f"Total frames processed: {frame_count}")
+        # Wait for ENTER key (ASCII code 13) when objects are detected
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
     
     # Clean up
     cap.release()
     cv2.destroyAllWindows()
+    
+    print_header("\nDetection Results")
+    print_info(f"Objects detected: {objects_detected}")
+    if first_detection_frame:
+        print_info(f"First detection occurred at frame: {first_detection_frame}")
+    print_info(f"Total frames processed: {frame_count}")
 
 if __name__ == "__main__":
     main() 

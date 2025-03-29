@@ -3,6 +3,7 @@
 # Converts units (e.g. pixels, axis-rotation units, radians) to units and vice versa
 
 import numpy as np
+from terminal_utils import print_info, print_success, print_warning, print_error, print_status, print_header
 
 class UnitConverter:
     """ Converts units to units and vice versa"""
@@ -89,11 +90,12 @@ class UnitConverter:
 
 def main():
     converter_object = UnitConverter()
-    print(converter_object.ARU_to_px(1500.0))
-    print(converter_object.px_to_ARU(320.0))
-    print()
-    print(converter_object.ARU_delta_to_px_delta(100.0))
-    print(converter_object.px_delta_to_ARU_delta(100.0))
+    
+    print_header("Unit Converter Test Results")
+    print_info(f"ARU to pixels: {converter_object.ARU_to_px(1500.0)}")
+    print_info(f"Pixels to ARU: {converter_object.px_to_ARU(320.0)}")
+    print_info(f"ARU delta to pixels delta: {converter_object.ARU_delta_to_px_delta(100.0)}")
+    print_info(f"Pixels delta to ARU delta: {converter_object.px_delta_to_ARU_delta(100.0)}")
 
 
 if __name__ == "__main__":

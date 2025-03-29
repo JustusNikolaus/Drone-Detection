@@ -5,6 +5,7 @@ import time
 import math
 import threading
 from pymavlink import mavutil
+from terminal_utils import print_info, print_success, print_warning, print_error, print_status
 
 
 class Attitude:
@@ -59,17 +60,19 @@ class Attitude:
         # Using UDP connection for testing without physical connection
         connection = mavutil.mavlink_connection('udpout:localhost:14550')
 
-        print("Waiting for heartbeat...")
-        connection.wait_heartbeat()
-        print("Heartbeat received from system", connection.target_system)
+        print_info("Waiting for heartbeat...")
+        # connection.wait_heartbeat()
+        print_success(f"Heartbeat received from system {connection.target_system}")
 
         #! TODO zet stream aan
+        return connection
 
     def _receiver_loop(self):
         """ Internal method for the receiver thread loop """
         while self.running:
             # 'blocking = true' means it will wait for a message to arrive
-            msg = self.connection.recv_match(type = 'ATTITUDE', blocking = True)
+            # msg = self.connection.recv_match(type = 'ATTITUDE', blocking = True)
+            msg = None
             if msg:
                 self.d_msg_time_boot_ms = msg.time_boot_ms
                 self.d_msg_roll = msg.roll
@@ -79,15 +82,14 @@ class Attitude:
                 self.d_msg_pitchspeed = msg.pitchspeed
                 self.d_msg_yawspeed = msg.yawspeed
 
-                print("Received ATTITUDE message:")
-                print(f"  Time Boot (ms): {self.d_msg_time_boot_ms}")
-                print(f"  Roll (rad): {self.d_msg_roll}")
-                print(f"  Pitch (rad): {self.d_msg_pitch}")
-                print(f"  Yaw (rad): {self.d_msg_yaw}")
-                print(f"  Roll Speed (rad/s): {self.d_msg_rollspeed}")
-                print(f"  Pitch Speed (rad/s): {self.d_msg_pitchspeed}")
-                print(f"  Yaw Speed (rad/s): {self.d_msg_yawspeed}")
-                print("----------")
+                print_status("Received ATTITUDE message", "info")
+                print_info(f"Time Boot (ms): {self.d_msg_time_boot_ms}")
+                print_info(f"Roll (rad): {self.d_msg_roll}")
+                print_info(f"Pitch (rad): {self.d_msg_pitch}")
+                print_info(f"Yaw (rad): {self.d_msg_yaw}")
+                print_info(f"Roll Speed (rad/s): {self.d_msg_rollspeed}")
+                print_info(f"Pitch Speed (rad/s): {self.d_msg_pitchspeed}")
+                print_info(f"Yaw Speed (rad/s): {self.d_msg_yawspeed}")
 
     def start_receiving(self):
         """ Starts the receiver thread """
@@ -96,14 +98,14 @@ class Attitude:
             self.receiver_thread = threading.Thread(target=self._receiver_loop)
             self.receiver_thread.daemon = True  # Thread will exit when main program exits
             self.receiver_thread.start()
-            print("Receiver thread started")
+            print_success("Receiver thread started")
 
     def stop_receiving(self):
         """ Stops the receiver thread """
         self.running = False
         if self.receiver_thread:
             self.receiver_thread.join()
-            print("Receiver thread stopped")
+            print_warning("Receiver thread stopped")
 
     def set_attitude(self):
         """ Sets the object state to the new """
@@ -114,15 +116,14 @@ class Attitude:
         self.d_rollspeed = self.d_msg_rollspeed
         self.d_pitchspeed = self.d_msg_pitchspeed
         self.d_yawspeed = self.d_msg_yawspeed
-        print("Updated state:")
-        print(f"  Time Boot (ms): {self.d_time_boot_ms}")
-        print(f"  Roll (rad): {self.d_roll}")
-        print(f"  Pitch (rad): {self.d_pitch}")
-        print(f"  Yaw (rad): {self.d_yaw}")
-        print(f"  Roll Speed (rad/s): {self.d_rollspeed}")
-        print(f"  Pitch Speed (rad/s): {self.d_pitchspeed}")
-        print(f"  Yaw Speed (rad/s): {self.d_yawspeed}")
-        print("----------")
+        print_status("Updated state", "info")
+        print_info(f"Time Boot (ms): {self.d_time_boot_ms}")
+        print_info(f"Roll (rad): {self.d_roll}")
+        print_info(f"Pitch (rad): {self.d_pitch}")
+        print_info(f"Yaw (rad): {self.d_yaw}")
+        print_info(f"Roll Speed (rad/s): {self.d_rollspeed}")
+        print_info(f"Pitch Speed (rad/s): {self.d_pitchspeed}")
+        print_info(f"Yaw Speed (rad/s): {self.d_yawspeed}")
 
     def get_attitude(self) -> tuple:
         """ Returns the latest attitude """
@@ -147,7 +148,7 @@ class Attitude:
             thrust = 0.0                # Example thrust (50%)
 
             time_boot_ms = int((time.time() - self.start_time) * 1000)
-            print(f"Sending simulated SET_ATTITUDE_TARGET message with time_boot_ms = {time_boot_ms}...")
+            print_info(f"Sending SET_ATTITUDE_TARGET message with time_boot_ms = {time_boot_ms}...")
 
             self.connection.mav.set_attitude_target_send(
                 time_boot_ms,
@@ -161,10 +162,10 @@ class Attitude:
                 thrust
             )
 
-            print("Message sent.")
+            print_success("Message sent successfully")
 
         except KeyboardInterrupt:
-            print("Transmission stopped by user.")
+            print_warning("Transmission stopped by user")
 
         
     def __euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> tuple:

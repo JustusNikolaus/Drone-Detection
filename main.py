@@ -205,9 +205,10 @@ def main():
         system = ObjectTrackingSystem(detection_type)
         system.run()
     except Exception as e:
-        print_error(f"Fatal error: {str(e)}")
-        print("Traceback:")
-        traceback.print_exc()
+        print_error("An error occurred:")
+        print_error(str(e))
+        print_error("Traceback:")
+        print_error(traceback.format_exc())
 
 if __name__ == "__main__":
     main() 
