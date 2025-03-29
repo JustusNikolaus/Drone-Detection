@@ -1,5 +1,6 @@
 import cv2
 import time
+import traceback
 from detection import ObjectDetector
 from tracking import ObjectTracker
 
@@ -10,15 +11,25 @@ class ObjectTrackingSystem:
         Args:
             detection_type: 'face' or 'yolo'
         """
-        self.detector = ObjectDetector(detection_type)
-        self.tracker = None
-        self.tracking = False
-        self.selected_bbox = None
-        
-        # Initialize video capture
-        self.video = cv2.VideoCapture(0)
-        if not self.video.isOpened():
-            raise Exception("Could not open video capture device")
+        try:
+            print(f"Initializing {detection_type} detection system...")
+            self.detector = ObjectDetector(detection_type)
+            self.tracker = None
+            self.tracking = False
+            self.selected_bbox = None
+            
+            # Initialize video capture
+            print("Attempting to open video capture device...")
+            self.video = cv2.VideoCapture(0)
+            if not self.video.isOpened():
+                raise Exception("Could not open video capture device")
+            print("Video capture device opened successfully")
+            
+        except Exception as e:
+            print(f"Error during initialization: {str(e)}")
+            print("Traceback:")
+            traceback.print_exc()
+            raise
     
     def mouse_callback(self, event, x, y, flags, param):
         """
@@ -110,15 +121,21 @@ class ObjectTrackingSystem:
         
 
 def main():
-    # Ask user for detection type
-    while True:
-        detection_type = input("Choose detection type (face/yolo): ").lower()
-        if detection_type in ['face', 'yolo', 'yolov8']:
-            break
-        print("Please enter either 'face' or 'yolo'")
-    
-    system = ObjectTrackingSystem(detection_type)
-    system.run()
+    try:
+        # Ask user for detection type
+        while True:
+            detection_type = input("Choose detection type (face/yolo): ").lower()
+            if detection_type in ['face', 'yolo', 'yolov8']:
+                break
+            print("Please enter either 'face' or 'yolo'")
+        
+        print(f"Starting system with {detection_type} detection...")
+        system = ObjectTrackingSystem(detection_type)
+        system.run()
+    except Exception as e:
+        print(f"Fatal error: {str(e)}")
+        print("Traceback:")
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main() 
