@@ -1,12 +1,31 @@
 import cv2
 # from picamera2 import Picamera2
 import time
+from terminal_utils import print_info, print_warning, print_error
 
 #setup and initialize Picamer2
 # picam2 = Picamera2()
 # picam2.configure(picam2.create_preview_configuration(raw={"size":(1640,1232)},main={"format":'RGB888',"size": (640,480)}))
 # picam2.start()
 # time.sleep(2)
+
+#CPU unilization on laptop with intel ultra7
+# if tracker_type == 'BOOSTING': # cpu ~15%, track after reappear: yes, detect lost target: no
+#     tracker = cv2.legacy.TrackerBoosting_create()
+# if tracker_type == 'MIL':   # cpu ~90%, track after reappear: yes, detect lost target: no
+#     tracker = cv2.TrackerMIL_create()
+# if tracker_type == 'KCF': # cpu ~5%, track after reappear: sometimes, detect lost target: yes, Note: chanse lost after zoom
+#     tracker = cv2.TrackerKCF_create()
+# if tracker_type == 'TLD': # cpu ~60-75%, track after reappear: yes, detect lost target: yes
+#     tracker = cv2.legacy.TrackerTLD_create()
+# if tracker_type == 'MEDIANFLOW': # cpu ~15-20%, track after reappear: yes, detect lost target: no
+#     tracker = cv2.legacy.TrackerMedianFlow_create()
+# if tracker_type == 'GOTURN':
+#     tracker = cv2.TrackerGOTURN_create()
+# if tracker_type == 'MOSSE':# cpu ~1-2.5%, track after reappear: yes, detect lost target: no
+#     tracker = cv2.legacy.TrackerMOSSE_create()
+# if tracker_type == "CSRT": # cpu ~35%, track after reappear: yes, detect lost target: no
+#     tracker = cv2.TrackerCSRT_create()
 
 # used to record the time when we processed last frame 
 prev_frame_time = 0
@@ -56,7 +75,7 @@ class ObjectTracker:
             },
             'CSRT': {  # cpu ~35%
                 'create': cv2.TrackerCSRT_create,
-                'track_after_reappear': True,
+                'track_after_reappear': False,
                 'detect_lost': False
             }
         }
@@ -65,7 +84,7 @@ class ObjectTracker:
         if tracker_type not in self.tracker_zoo:
             raise ValueError(f"Unknown tracker type: {tracker_type}")
         self.tracker_type = tracker_type
-        print(f"Tracker selected: {tracker_type}")
+        print_info(f"Tracker selected: {tracker_type}")
         
         # Initialize tracker
         self.tracker = self.create_tracker(tracker_type)
@@ -122,6 +141,7 @@ class ObjectTracker:
         else:
             cv2.putText(frame, "Tracking failed!", (100, 80), self.font, 
                        0.75, (0, 0, 255), 2)
+            print_warning("Tracking lost target!")
         
         # Draw FPS
         cv2.putText(frame, str(fps), (7, 70), self.font, 2, (100, 255, 0), 3, cv2.LINE_AA)

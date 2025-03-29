@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 from ultralytics import YOLO
+from terminal_utils import print_info, print_warning, print_error, print_success
 
 class ObjectDetector:
     def __init__(self, detection_type='face'):
@@ -56,7 +57,7 @@ class ObjectDetector:
         else:
             raise ValueError("detection_type must be either 'face' or 'yolo'")
         
-        print(f"Initialized {detection_type} detection")
+        print_success(f"Initialized {detection_type} detection")
         
     def detect(self, frame):
         """
