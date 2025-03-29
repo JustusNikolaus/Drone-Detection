@@ -11,12 +11,19 @@ from terminal_utils import (
     print_info, print_loading, print_menu, print_status
 )
 
+try:
+    from picamera2 import Picamera2
+    PICAMERA_AVAILABLE = True
+except ImportError:
+    PICAMERA_AVAILABLE = False
+
 class ObjectTrackingSystem:
-    def __init__(self, detection_type='face'):
+    def __init__(self, detection_type='face', camera_source='system'):
         """
-        Initialize the tracking system with specified detection type
+        Initialize the tracking system with specified detection type and camera source
         Args:
             detection_type: 'face' or 'yolo'
+            camera_source: 'system' or 'picamera'
         """
         try:
             print_header("Object Tracking System")
@@ -28,26 +35,41 @@ class ObjectTrackingSystem:
             self.attitude = Attitude()
             self.controller = ConstantRateController(UnitConverter())
             
-            # Initialize video capture with more detailed error checking
-            print_info("Attempting to open video capture device...")
-            self.video = cv2.VideoCapture(0)
+            # Initialize video capture based on camera source
+            print_info(f"Attempting to open {camera_source} camera...")
             
-            # Check if camera opened successfully
-            if not self.video.isOpened():
-                print_error("Failed to open camera. Please check camera permissions.")
-                print_info("On macOS, please ensure camera access is granted in System Preferences > Security & Privacy > Privacy > Camera")
-                raise Exception("Could not open video capture device")
-            
-            # Initialize height and width of video
-            ret, frame = self.video.read()
-            self.height, self.width = frame.shape[:2]
-            
-            if not ret:
-                print_error("Camera opened but failed to read frame. Please check camera permissions.")
-                print_info("On macOS, please ensure camera access is granted in System Preferences > Security & Privacy > Privacy > Camera")
-                raise Exception("Could not read frame from camera")
+            if camera_source == 'picamera':
+                if not PICAMERA_AVAILABLE:
+                    print_error("PiCamera2 is not available. Please install it or check your Raspberry Pi setup.")
+                    raise Exception("PiCamera2 not available")
                 
-            print_success("Video capture device opened successfully")
+                self.camera = Picamera2()
+                config = self.camera.create_preview_configuration()
+                self.camera.configure(config)
+                self.camera.start()
+                # Get a frame to determine dimensions
+                frame = self.camera.capture_array()
+                self.height, self.width = frame.shape[:2]
+                self.video = None  # We don't use cv2.VideoCapture for PiCamera
+                
+            else:  # system camera
+                self.camera = None
+                self.video = cv2.VideoCapture(0)
+                
+                # Check if camera opened successfully
+                if not self.video.isOpened():
+                    print_error("Failed to open camera. Please check camera permissions.")
+                    print_info("On macOS, please ensure camera access is granted in System Preferences > Security & Privacy > Privacy > Camera")
+                    raise Exception("Could not open video capture device")
+                
+                # Initialize height and width of video
+                ret, frame = self.video.read()
+                if not ret:
+                    print_error("Camera opened but failed to read frame. Please check camera permissions.")
+                    raise Exception("Could not read frame from camera")
+                self.height, self.width = frame.shape[:2]
+            
+            print_success("Camera initialized successfully")
             
         except Exception as e:
             print_error(f"Error during initialization: {str(e)}")
@@ -84,9 +106,14 @@ class ObjectTrackingSystem:
             print_info("Press 'q' to quit the application")
             
             while True:
-                ok, frame = self.video.read()
+                if self.video:  # System camera
+                    ok, frame = self.video.read()
+                else:  # PiCamera
+                    frame = self.camera.capture_array()
+                    ok = frame is not None
+                
                 if not ok:
-                    print_error("Failed to read frame from video capture")
+                    print_error("Failed to read frame from camera")
                     break
                     
                 if not self.tracking:
@@ -149,6 +176,8 @@ class ObjectTrackingSystem:
         # Release video capture
         if self.video:
             self.video.release()
+        elif self.camera:
+            self.camera.stop()
         
         # Close all windows
         cv2.destroyAllWindows()
@@ -183,6 +212,27 @@ class ObjectTrackingSystem:
 
 def main():
     try:
+        # Ask user for camera source
+        print_menu(
+            ["System Camera", "Raspberry Pi Camera"],
+            "Select Camera Source"
+        )
+        
+        while True:
+            try:
+                camera_choice = int(input("\nEnter your choice (1-2): "))
+                if 1 <= camera_choice <= 2:
+                    break
+                print_warning("Please enter either 1 or 2")
+            except ValueError:
+                print_error("Please enter a valid number")
+        
+        camera_source = 'system' if camera_choice == 1 else 'picamera'
+        
+        if camera_source == 'picamera' and not PICAMERA_AVAILABLE:
+            print_error("PiCamera2 is not available. Please install it or check your Raspberry Pi setup.")
+            return
+        
         # Ask user for detection type
         print_menu(
             ["Face Detection", "YOLOv3 Detection", "YOLOv8 Detection"],
@@ -201,8 +251,8 @@ def main():
         detection_types = ['face', 'yolo', 'yolov8']
         detection_type = detection_types[choice - 1]
         
-        print_status(f"Starting system with {detection_type} detection...", "info")
-        system = ObjectTrackingSystem(detection_type)
+        print_status(f"Starting system with {detection_type} detection using {camera_source} camera...", "info")
+        system = ObjectTrackingSystem(detection_type, camera_source)
         system.run()
     except Exception as e:
         print_error("An error occurred:")
