@@ -3,6 +3,7 @@
 
 import time
 import math
+import threading
 from pymavlink import mavutil
 
 
@@ -49,10 +50,14 @@ class Attitude:
         self.d_pitchspeed = 0.0
         self.d_yawspeed = 0.0
 
+        # Thread control
+        self.receiver_thread = None
+        self.running = False
+
     def __establish_connection(self):
         """ Establishes connection """
-                                        # for serial on Raspberry Pi 2
-        connection = mavutil.mavlink_connection('/dev/serial0', baud = 115200)
+        # Using UDP connection for testing without physical connection
+        connection = mavutil.mavlink_connection('udpout:localhost:14550')
 
         print("Waiting for heartbeat...")
         connection.wait_heartbeat()
@@ -60,12 +65,9 @@ class Attitude:
 
         #! TODO zet stream aan
 
-
-    def start_receiving(self):
-        """ Continuously waits for and prints ATTITUDE messages """
-        print("Receiver waiting for ATTITUDE messages...")
-
-        while True:
+    def _receiver_loop(self):
+        """ Internal method for the receiver thread loop """
+        while self.running:
             # 'blocking = true' means it will wait for a message to arrive
             msg = self.connection.recv_match(type = 'ATTITUDE', blocking = True)
             if msg:
@@ -86,6 +88,22 @@ class Attitude:
                 print(f"  Pitch Speed (rad/s): {self.d_msg_pitchspeed}")
                 print(f"  Yaw Speed (rad/s): {self.d_msg_yawspeed}")
                 print("----------")
+
+    def start_receiving(self):
+        """ Starts the receiver thread """
+        if not self.running:
+            self.running = True
+            self.receiver_thread = threading.Thread(target=self._receiver_loop)
+            self.receiver_thread.daemon = True  # Thread will exit when main program exits
+            self.receiver_thread.start()
+            print("Receiver thread started")
+
+    def stop_receiving(self):
+        """ Stops the receiver thread """
+        self.running = False
+        if self.receiver_thread:
+            self.receiver_thread.join()
+            print("Receiver thread stopped")
 
     def set_attitude(self):
         """ Sets the object state to the new """
@@ -132,7 +150,7 @@ class Attitude:
                 time_boot_ms = int((time.time() - self.start_time) * 1000)
                 print(f"Sending simulated SET_ATTITUDE_TARGET message with time_boot_ms = {time_boot_ms}...")
 
-                self.send_connection.mav.set_attitude_target_send(
+                self.connection.mav.set_attitude_target_send(
                     time_boot_ms,
                     target_system,
                     target_component,
@@ -150,7 +168,7 @@ class Attitude:
             print("Transmission stopped by user.")
 
         
-    def __euler_to_quaternion(roll: float, pitch: float, yaw: float) -> tuple:
+    def __euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> tuple:
         """ Convert roll (x), pitch (y), and yaw (z) into a quaternion
         
         Example usage:
@@ -178,4 +196,3 @@ if __name__ == "__main__":
     
     # Uncomment depending on which functionality to test
     # attitude.start_receiving()
-    # attitude.start_sending()
